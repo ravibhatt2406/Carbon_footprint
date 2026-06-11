@@ -1,0 +1,154 @@
+{
+  "users": [
+    {
+      "id": "ei8ugwff2",
+      "createdAt": "2026-06-10T13:58:54.475Z",
+      "email": "jane@ecolens.ai",
+      "password": "$2a$10$WcAEnO6cFo87t85kZffWBueg.ZX.dUWnOT3TEjpG2BSlzEx5SPqoS",
+      "displayName": "Jane Green",
+      "points": 15,
+      "updatedAt": "2026-06-10T14:05:20.563Z"
+    },
+    {
+      "id": "2y1rybyts",
+      "createdAt": "2026-06-10T14:09:35.852Z",
+      "email": "ravibhatt2406@gmail.com",
+      "password": "$2a$10$gGRnNY5bLiQ8t6TMHg8IzOa1QvZziq03ZM3SKqaslDZuDWg.wRkii",
+      "displayName": "ravi",
+      "points": 0
+    }
+  ],
+  "footprints": [
+    {
+      "id": "jyc99gmkb",
+      "createdAt": "2026-06-10T14:04:40.546Z",
+      "userId": "ei8ugwff2",
+      "inputs": {
+        "carKm": 150,
+        "bikeKm": 10,
+        "busKm": 30,
+        "trainKm": 15,
+        "electricityKwh": 200,
+        "foodHabit": "vegetarian",
+        "shoppingHabit": "low"
+      },
+      "breakdown": {
+        "transportation": 130.12,
+        "electricity": 100,
+        "food": 150,
+        "shopping": 50
+      },
+      "total": 430.12,
+      "advice": "### EcoLens AI Simulated Analysis 🌍\n\nBased on your monthly carbon footprint of **430.12 kg CO₂**, your biggest contributor is **FOOD** (150 kg CO₂).\n\n#### 🔍 Source Breakdown:\n- 🚗 Transportation: **130.12 kg CO₂**\n- ⚡ Electricity: **100 kg CO₂**\n- 🥗 Diet & Food: **150 kg CO₂**\n- 🛍️ Shopping & Consumables: **50 kg CO₂**\n\n#### 💡 Personalized Recommendations:\n- **Diet Shift:** Transitioning some of your non-vegetarian/mixed meals to plant-based choices can cut dietary emissions by **30-50 kg CO₂** monthly. Try observing \"Meatless Mondays\".\n- **Reduce Waste:** Buy only what you need. Food waste in landfills accounts for significant global methane emissions.\n\n#### 🎯 Quick Wins:\n- **Switch to LED bulbs:** Saves about **5 kg CO₂** per month per room.\n- **Wash laundry in cold water:** Saves **10-15 kg CO₂** monthly by avoiding water heating.\n- **One meat-free day per week:** Saves approximately **12 kg CO₂** per month.\n",
+      "date": "2026-06-10T14:04:40.545Z"
+    },
+    {
+      "id": "hg6qorjbc",
+      "createdAt": "2026-06-10T14:10:56.251Z",
+      "userId": "2y1rybyts",
+      "inputs": {
+        "carKm": 400,
+        "bikeKm": 10,
+        "busKm": 15,
+        "trainKm": 0,
+        "electricityKwh": 1000,
+        "foodHabit": "vegetarian",
+        "shoppingHabit": "low"
+      },
+      "breakdown": {
+        "transportation": 317.17,
+        "electricity": 500,
+        "food": 150,
+        "shopping": 50
+      },
+      "total": 1017.17,
+      "advice": "### EcoLens AI Simulated Analysis 🌍\n\nBased on your monthly carbon footprint of **1017.17 kg CO₂**, your biggest contributor is **ELECTRICITY** (500 kg CO₂).\n\n#### 🔍 Source Breakdown:\n- 🚗 Transportation: **317.17 kg CO₂**\n- ⚡ Electricity: **500 kg CO₂**\n- 🥗 Diet & Food: **150 kg CO₂**\n- 🛍️ Shopping & Consumables: **50 kg CO₂**\n\n#### 💡 Personalized Recommendations:\n- **Smart Appliances:** Your monthly consumption is 1000 kWh. Switching to LED bulbs and setting your thermostat 1-2 degrees lower can save up to **50 kg CO₂** per month.\n- **Standby Draw:** Unplug devices when not in use. Standby power accounts for 5-10% of home electricity use.\n\n#### 🎯 Quick Wins:\n- **Switch to LED bulbs:** Saves about **5 kg CO₂** per month per room.\n- **Wash laundry in cold water:** Saves **10-15 kg CO₂** monthly by avoiding water heating.\n- **One meat-free day per week:** Saves approximately **12 kg CO₂** per month.\n",
+      "date": "2026-06-10T14:10:56.251Z"
+    }
+  ],
+  "goals": [],
+  "challenges": [
+    {
+      "id": "a1bqkvrjn",
+      "createdAt": "2026-06-10T14:05:10.267Z",
+      "userId": "ei8ugwff2",
+      "title": "Cold Water Wash",
+      "description": "Wash all your laundry loads using cold water settings to reduce hot-water energy consumption.",
+      "points": 15,
+      "completed": true,
+      "weekStartDate": "2026-06-08",
+      "dateCompleted": "2026-06-10T14:05:20.560Z",
+      "updatedAt": "2026-06-10T14:05:20.561Z"
+    },
+    {
+      "id": "1d7ywf7sp",
+      "createdAt": "2026-06-10T14:05:10.269Z",
+      "userId": "ei8ugwff2",
+      "title": "Veggie Day",
+      "description": "Eat entirely vegetarian or vegan meals today to lower agricultural impact.",
+      "points": 20,
+      "completed": false,
+      "weekStartDate": "2026-06-08"
+    },
+    {
+      "id": "o8iy694ur",
+      "createdAt": "2026-06-10T14:05:10.271Z",
+      "userId": "ei8ugwff2",
+      "title": "Active Commute",
+      "description": "Replace at least one short car trip (< 3 km) by walking, biking, or riding transit.",
+      "points": 25,
+      "completed": false,
+      "weekStartDate": "2026-06-08"
+    },
+    {
+      "id": "prk7kdiif",
+      "createdAt": "2026-06-10T14:11:22.798Z",
+      "userId": "2y1rybyts",
+      "title": "Cold Water Wash",
+      "description": "Wash all your laundry loads using cold water settings to reduce hot-water energy consumption.",
+      "points": 15,
+      "completed": false,
+      "weekStartDate": "2026-06-08"
+    },
+    {
+      "id": "c9sxx3s25",
+      "createdAt": "2026-06-10T14:11:22.800Z",
+      "userId": "2y1rybyts",
+      "title": "Veggie Day",
+      "description": "Eat entirely vegetarian or vegan meals today to lower agricultural impact.",
+      "points": 20,
+      "completed": false,
+      "weekStartDate": "2026-06-08"
+    },
+    {
+      "id": "g1elbo5vq",
+      "createdAt": "2026-06-10T14:11:22.802Z",
+      "userId": "2y1rybyts",
+      "title": "Active Commute",
+      "description": "Replace at least one short car trip (< 3 km) by walking, biking, or riding transit.",
+      "points": 25,
+      "completed": false,
+      "weekStartDate": "2026-06-08"
+    }
+  ],
+  "badges": [
+    {
+      "id": "tkpemtd74",
+      "createdAt": "2026-06-10T13:58:54.478Z",
+      "userId": "ei8ugwff2",
+      "badgeType": "beginner",
+      "title": "Eco Beginner",
+      "description": "Welcome to the eco-journey!",
+      "unlockedAt": "2026-06-10T13:58:54.478Z"
+    },
+    {
+      "id": "c65xgp5h8",
+      "createdAt": "2026-06-10T14:09:35.854Z",
+      "userId": "2y1rybyts",
+      "badgeType": "beginner",
+      "title": "Eco Beginner",
+      "description": "Welcome to the eco-journey!",
+      "unlockedAt": "2026-06-10T14:09:35.853Z"
+    }
+  ]
+}
