@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
-import { Award, Calendar, History, ShieldAlert, Sparkles, User, HelpCircle, Lock } from 'lucide-react';
+import ErrorAlert from '../components/ErrorAlert';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { Award, Calendar, History, Lock } from 'lucide-react';
 
+/**
+ * Profile page showing user info, badges/achievements, and calculation history.
+ * @returns {JSX.Element} The profile page
+ */
 export default function Profile() {
   const { user } = useAuth();
   const [badges, setBadges] = useState([]);
@@ -31,12 +37,7 @@ export default function Profile() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-eco-500 border-t-transparent"></div>
-        <p className="text-slate-400 font-semibold">Loading profile parameters...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading profile parameters..." />;
   }
 
   // Helper to resolve badge coloring icons
@@ -55,13 +56,13 @@ export default function Profile() {
     <div className="max-w-5xl mx-auto space-y-8 text-left">
       
       {/* Profile Header */}
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <section className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6" aria-labelledby="profile-heading">
         <div className="flex items-center space-x-4">
-          <div className="h-16 w-16 bg-gradient-to-tr from-eco-500 to-emerald-600 rounded-2xl flex items-center justify-center text-2xl font-bold text-white uppercase shadow-md shadow-eco-500/10">
+          <div className="h-16 w-16 bg-gradient-to-tr from-eco-500 to-emerald-600 rounded-2xl flex items-center justify-center text-2xl font-bold text-white uppercase shadow-md shadow-eco-500/10" aria-hidden="true">
             {user?.displayName?.[0] || 'U'}
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">{user?.displayName}</h2>
+            <h1 id="profile-heading" className="text-2xl font-black text-slate-800 tracking-tight">{user?.displayName}</h1>
             <p className="text-xs font-semibold text-slate-400 mt-1">{user?.email}</p>
           </div>
         </div>
@@ -80,72 +81,73 @@ export default function Profile() {
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {error && (
-        <div className="bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold p-4 rounded-2xl flex items-center space-x-2">
-          <HelpCircle className="h-5 w-5" />
-          <span>{error}</span>
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* BADGES & ACHIEVEMENTS PANEL */}
-        <div className="lg:col-span-1 space-y-4">
-          <h3 className="text-base font-extrabold text-slate-700">Unlocked Achievements</h3>
-          <div className="grid grid-cols-1 gap-4">
+        <section className="lg:col-span-1 space-y-4" aria-labelledby="badges-heading">
+          <h2 id="badges-heading" className="text-base font-extrabold text-slate-700">Unlocked Achievements</h2>
+          <div className="grid grid-cols-1 gap-4" role="list" aria-label="Achievement badges">
             {badges.map((badge) => (
-              <div
+              <article
                 key={badge.badgeType}
+                role="listitem"
                 className={`bg-white rounded-3xl p-5 border shadow-sm flex items-start space-x-4 transition-all ${
                   badge.unlocked ? 'border-slate-100' : 'border-slate-100/60 opacity-60'
                 }`}
               >
                 <div className={`p-3 rounded-2xl shrink-0 ${getBadgeIconColor(badge.badgeType, badge.unlocked)}`}>
-                  {badge.unlocked ? <Award className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
+                  {badge.unlocked ? <Award className="h-6 w-6" aria-hidden="true" /> : <Lock className="h-6 w-6" aria-hidden="true" />}
                 </div>
                 
                 <div className="space-y-1 overflow-hidden">
-                  <h4 className="font-extrabold text-sm text-slate-800 truncate">{badge.title}</h4>
+                  <h3 className="font-extrabold text-sm text-slate-800 truncate">{badge.title}</h3>
                   <p className="text-[11px] text-slate-400 font-medium leading-relaxed">{badge.description}</p>
                   {badge.unlocked && badge.unlockedAt && (
                     <span className="inline-block text-[9px] font-bold text-eco-600 bg-eco-50 px-2 py-0.5 rounded-md mt-1">
                       Unlocked {new Date(badge.unlockedAt).toLocaleDateString()}
                     </span>
                   )}
+                  {!badge.unlocked && (
+                    <span className="sr-only">Locked - not yet earned</span>
+                  )}
                 </div>
-              </div>
+              </article>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* CARBON HISTORY LIST PANEL */}
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-base font-extrabold text-slate-700 flex items-center space-x-2">
-            <History className="h-5 w-5 text-slate-500" />
+        <section className="lg:col-span-2 space-y-4" aria-labelledby="history-heading">
+          <h2 id="history-heading" className="text-base font-extrabold text-slate-700 flex items-center space-x-2">
+            <History className="h-5 w-5 text-slate-500" aria-hidden="true" />
             <span>Calculation Logs History</span>
-          </h3>
+          </h2>
 
           {history.length > 0 ? (
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100" role="list" aria-label="Carbon calculation history">
                 {history.map((log) => (
-                  <div key={log.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/40 transition-colors">
+                  <article key={log.id} role="listitem" className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/40 transition-colors">
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
                         <span className="text-sm font-extrabold text-slate-800">
                           {log.total} kg CO₂
                         </span>
                         <span className="text-[10px] font-semibold text-slate-400 flex items-center">
-                          <Calendar className="h-3.5 w-3.5 mr-1" />
-                          {new Date(log.date).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          <Calendar className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+                          <time dateTime={log.date}>
+                            {new Date(log.date).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </time>
                         </span>
                       </div>
                       <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
@@ -153,21 +155,21 @@ export default function Profile() {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2 text-center text-[9px] font-bold text-slate-500 shrink-0">
+                    <div className="grid grid-cols-4 gap-2 text-center text-[9px] font-bold text-slate-500 shrink-0" aria-label="Breakdown">
                       <div className="bg-slate-50 border border-slate-100 px-2 py-1.5 rounded-lg">
-                        <p>🚗 {log.breakdown.transportation}k</p>
+                        <p><span aria-hidden="true">🚗</span> {log.breakdown.transportation}k</p>
                       </div>
                       <div className="bg-slate-50 border border-slate-100 px-2 py-1.5 rounded-lg">
-                        <p>⚡ {log.breakdown.electricity}k</p>
+                        <p><span aria-hidden="true">⚡</span> {log.breakdown.electricity}k</p>
                       </div>
                       <div className="bg-slate-50 border border-slate-100 px-2 py-1.5 rounded-lg">
-                        <p>🥗 {log.breakdown.food}k</p>
+                        <p><span aria-hidden="true">🥗</span> {log.breakdown.food}k</p>
                       </div>
                       <div className="bg-slate-50 border border-slate-100 px-2 py-1.5 rounded-lg">
-                        <p>🛍️ {log.breakdown.shopping}k</p>
+                        <p><span aria-hidden="true">🛍️</span> {log.breakdown.shopping}k</p>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             </div>
@@ -176,7 +178,7 @@ export default function Profile() {
               No historical log calculations found. Compute your footprint first!
             </div>
           )}
-        </div>
+        </section>
 
       </div>
     </div>

@@ -1,19 +1,20 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
+/**
+ * Route guard component that redirects unauthenticated users to login.
+ * Shows an accessible loading spinner while authentication is being verified.
+ * @param {Object} props
+ * @param {React.ReactNode} props.children - The protected page content
+ * @returns {JSX.Element} Children, redirect, or loading state
+ */
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-eco-500 border-t-transparent"></div>
-          <p className="text-slate-500 font-medium">Checking credentials...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Checking credentials..." />;
   }
 
   if (!user) {

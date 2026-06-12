@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Leaf } from 'lucide-react';
 
+/**
+ * Registration page component with accessible form.
+ * @returns {JSX.Element} The registration page
+ */
 export default function RegisterPage() {
   const { register, error: authError } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +51,8 @@ export default function RegisterPage() {
     }
   };
 
+  const errorMessage = validationError || authError;
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
       <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col space-y-6">
@@ -54,58 +60,87 @@ export default function RegisterPage() {
         {/* Header Branding */}
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="p-2.5 bg-eco-500 rounded-2xl w-fit">
-            <Leaf className="h-6 w-6 text-white" />
+            <Leaf className="h-6 w-6 text-white" aria-hidden="true" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Get Started</h2>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Get Started</h1>
           <p className="text-sm font-semibold text-slate-400">Join EcoLens AI and track carbon footprints</p>
         </div>
 
         {/* Display Errors */}
-        {(validationError || authError) && (
-          <div className="bg-red-50 text-red-700 text-xs font-semibold p-3.5 rounded-xl border border-red-100">
-            {validationError || authError}
+        {errorMessage && (
+          <div
+            id="register-error"
+            role="alert"
+            aria-live="assertive"
+            className="bg-red-50 text-red-700 text-xs font-semibold p-3.5 rounded-xl border border-red-100"
+          >
+            {errorMessage}
           </div>
         )}
 
         {/* Form Inputs */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="flex flex-col space-y-1.5 text-left">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Full Name / Display Name</label>
+            <label htmlFor="register-name" className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Full Name / Display Name
+            </label>
             <input
+              id="register-name"
+              name="displayName"
               type="text"
+              autoComplete="name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Alex Green"
+              aria-describedby={errorMessage ? 'register-error' : undefined}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-eco-500 text-sm font-medium transition-colors"
             />
           </div>
 
           <div className="flex flex-col space-y-1.5 text-left">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Email Address</label>
+            <label htmlFor="register-email" className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Email Address
+            </label>
             <input
+              id="register-email"
+              name="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="alex@example.com"
+              aria-describedby={errorMessage ? 'register-error' : undefined}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-eco-500 text-sm font-medium transition-colors"
             />
           </div>
 
           <div className="flex flex-col space-y-1.5 text-left">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Password</label>
+            <label htmlFor="register-password" className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Password
+            </label>
             <input
+              id="register-password"
+              name="password"
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              aria-describedby="password-hint"
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-eco-500 text-sm font-medium transition-colors"
             />
+            <span id="password-hint" className="sr-only">Password must be at least 6 characters</span>
           </div>
 
           <div className="flex flex-col space-y-1.5 text-left">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Confirm Password</label>
+            <label htmlFor="register-confirm-password" className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Confirm Password
+            </label>
             <input
+              id="register-confirm-password"
+              name="confirmPassword"
               type="password"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
@@ -119,7 +154,9 @@ export default function RegisterPage() {
             className="w-full bg-eco-600 hover:bg-eco-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-eco-600/10 disabled:opacity-75 flex items-center justify-center"
           >
             {loading ? (
-              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" role="status" aria-label="Creating account">
+                <span className="sr-only">Creating account...</span>
+              </div>
             ) : (
               'Create Account'
             )}

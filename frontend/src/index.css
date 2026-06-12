@@ -8,6 +8,55 @@
   body {
     @apply bg-slate-50 text-slate-800 antialiased font-sans selection:bg-eco-200 selection:text-eco-900;
   }
+
+  /* Visible focus ring styles for keyboard navigation — WCAG AA */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-eco-500;
+    outline-style: solid;
+  }
+
+  /* Remove default focus ring for mouse users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  /* Screen-reader-only utility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* Skip-to-content link — visible only on focus */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.75rem 1.5rem;
+  background: #274933;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border-radius: 0 0 0.75rem 0.75rem;
+  text-decoration: none;
+  transition: top 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #4c8c62;
+  outline-offset: 2px;
 }
 
 /* Glassmorphism panel styles */
@@ -47,4 +96,37 @@
 
 .animate-pulse-soft {
   animation: pulse-soft 3s infinite ease-in-out;
+}
+
+/* Accessible radio card styling — hides native radio, shows visual card */
+.radio-card-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.radio-card-label {
+  display: block;
+  cursor: pointer;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.radio-card-label:hover {
+  border-color: #94a3b8;
+}
+
+.radio-card-input:checked + .radio-card-label {
+  background-color: #f2f8f4;
+  border-color: #4c8c62;
+  box-shadow: 0 0 0 3px rgba(76, 140, 98, 0.15);
+}
+
+.radio-card-input:focus-visible + .radio-card-label {
+  outline: 2px solid #4c8c62;
+  outline-offset: 2px;
 }

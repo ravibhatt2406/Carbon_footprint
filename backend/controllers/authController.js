@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { db, useSimulation } = require('../config/firebase');
 const dbMock = require('../utils/dbMock');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ecolens_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET || 'ecolens_dev_only_secret';
 
 const authController = {
   /**

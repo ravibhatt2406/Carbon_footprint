@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import ErrorAlert from '../components/ErrorAlert';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
   Car,
   Zap,
@@ -9,10 +11,14 @@ import {
   Leaf,
   ChevronRight,
   ChevronLeft,
-  Sparkles,
-  HelpCircle
+  Sparkles
 } from 'lucide-react';
 
+/**
+ * Multi-step carbon footprint calculator page.
+ * Collects transportation, electricity, food, and shopping data.
+ * @returns {JSX.Element} The calculator page
+ */
 export default function CarbonCalculator() {
   const { refreshPoints } = useAuth();
   const [step, setStep] = useState(1);
@@ -86,21 +92,16 @@ export default function CarbonCalculator() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 text-left">
       <div>
-        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Carbon Calculator</h2>
+        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Carbon Calculator</h1>
         <p className="text-slate-500 font-medium mt-1">Estimate your carbon impact by answering simple lifestyle questions.</p>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 text-xs font-semibold p-4 rounded-2xl border border-red-100 flex items-center space-x-2">
-          <HelpCircle className="h-5 w-5" />
-          <span>{error}</span>
-        </div>
-      )}
+      <ErrorAlert message={error} variant="error" id="calculator-error" />
 
       {!result ? (
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Steps Side Navigator */}
-          <div className="md:col-span-1 border-r border-slate-100 md:pr-6 space-y-4">
+          <div className="md:col-span-1 border-r border-slate-100 md:pr-6 space-y-4" role="group" aria-label="Calculator steps">
             {stepsList.map((s) => {
               const StepIcon = s.icon;
               const isCurrent = step === s.id;
@@ -109,6 +110,7 @@ export default function CarbonCalculator() {
               return (
                 <div
                   key={s.id}
+                  aria-current={isCurrent ? 'step' : undefined}
                   className={`flex items-center space-x-3 p-3 rounded-2xl transition-all ${
                     isCurrent
                       ? 'bg-eco-500 text-white font-bold'
@@ -117,7 +119,7 @@ export default function CarbonCalculator() {
                       : 'text-slate-400 font-medium'
                   }`}
                 >
-                  <StepIcon className="h-5 w-5 shrink-0" />
+                  <StepIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <span className="text-sm">{s.title}</span>
                 </div>
               );
@@ -126,17 +128,19 @@ export default function CarbonCalculator() {
 
           {/* Form Content */}
           <div className="md:col-span-3 flex flex-col justify-between min-h-[300px]">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               {/* STEP 1: TRANSPORTATION */}
               {step === 1 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-extrabold text-slate-800">Weekly Commuting Distances</h3>
+                <fieldset className="space-y-4">
+                  <legend className="text-lg font-extrabold text-slate-800">Weekly Commuting Distances</legend>
                   <p className="text-xs text-slate-400">Estimate how many kilometers you travel per week.</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Car (km)</label>
+                      <label htmlFor="calc-car-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Car (km)</label>
                       <input
+                        id="calc-car-km"
+                        name="carKm"
                         type="number"
                         min="0"
                         value={carKm}
@@ -145,8 +149,10 @@ export default function CarbonCalculator() {
                       />
                     </div>
                     <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bicycle (km)</label>
+                      <label htmlFor="calc-bike-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bicycle (km)</label>
                       <input
+                        id="calc-bike-km"
+                        name="bikeKm"
                         type="number"
                         min="0"
                         value={bikeKm}
@@ -155,8 +161,10 @@ export default function CarbonCalculator() {
                       />
                     </div>
                     <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bus (km)</label>
+                      <label htmlFor="calc-bus-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bus (km)</label>
                       <input
+                        id="calc-bus-km"
+                        name="busKm"
                         type="number"
                         min="0"
                         value={busKm}
@@ -165,8 +173,10 @@ export default function CarbonCalculator() {
                       />
                     </div>
                     <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Train (km)</label>
+                      <label htmlFor="calc-train-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Train (km)</label>
                       <input
+                        id="calc-train-km"
+                        name="trainKm"
                         type="number"
                         min="0"
                         value={trainKm}
@@ -175,18 +185,20 @@ export default function CarbonCalculator() {
                       />
                     </div>
                   </div>
-                </div>
+                </fieldset>
               )}
 
               {/* STEP 2: ELECTRICITY */}
               {step === 2 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-extrabold text-slate-800">Home Electricity Usage</h3>
+                <fieldset className="space-y-4">
+                  <legend className="text-lg font-extrabold text-slate-800">Home Electricity Usage</legend>
                   <p className="text-xs text-slate-400">Enter your average monthly electrical consumption in kWh.</p>
                   
                   <div className="flex flex-col space-y-1 max-w-sm">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly Energy (kWh)</label>
+                    <label htmlFor="calc-electricity" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly Energy (kWh)</label>
                     <input
+                      id="calc-electricity"
+                      name="electricityKwh"
                       type="number"
                       min="0"
                       value={electricityKwh}
@@ -195,13 +207,13 @@ export default function CarbonCalculator() {
                       className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium"
                     />
                   </div>
-                </div>
+                </fieldset>
               )}
 
-              {/* STEP 3: FOOD HABITS */}
+              {/* STEP 3: FOOD HABITS — Accessible radio cards */}
               {step === 3 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-extrabold text-slate-800">Dietary Choices</h3>
+                <fieldset className="space-y-4">
+                  <legend className="text-lg font-extrabold text-slate-800">Dietary Choices</legend>
                   <p className="text-xs text-slate-400">Select the option that matches your weekly food habits best.</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -210,27 +222,30 @@ export default function CarbonCalculator() {
                       { id: 'mixed', title: 'Mixed Diet', desc: 'Poultry, fish, vegetables, occasional beef.' },
                       { id: 'non-vegetarian', title: 'Non-Vegetarian', desc: 'Frequent red meat, poultry, dairy.' }
                     ].map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setFoodHabit(item.id)}
-                        className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                          foodHabit === item.id
-                            ? 'bg-eco-50 border-eco-500 ring-2 ring-eco-500/20'
-                            : 'border-slate-200 hover:border-slate-350'
-                        }`}
-                      >
-                        <h4 className="font-extrabold text-sm text-slate-800">{item.title}</h4>
-                        <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">{item.desc}</p>
+                      <div key={item.id} className="relative">
+                        <input
+                          type="radio"
+                          id={`food-${item.id}`}
+                          name="foodHabit"
+                          value={item.id}
+                          checked={foodHabit === item.id}
+                          onChange={() => setFoodHabit(item.id)}
+                          className="radio-card-input"
+                        />
+                        <label htmlFor={`food-${item.id}`} className="radio-card-label">
+                          <h4 className="font-extrabold text-sm text-slate-800">{item.title}</h4>
+                          <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">{item.desc}</p>
+                        </label>
                       </div>
                     ))}
                   </div>
-                </div>
+                </fieldset>
               )}
 
-              {/* STEP 4: SHOPPING HABITS */}
+              {/* STEP 4: SHOPPING HABITS — Accessible radio cards */}
               {step === 4 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-extrabold text-slate-800">Shopping Consumer Habits</h3>
+                <fieldset className="space-y-4">
+                  <legend className="text-lg font-extrabold text-slate-800">Shopping Consumer Habits</legend>
                   <p className="text-xs text-slate-400">Select your purchasing level for clothing, goods, and electronics.</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -239,21 +254,24 @@ export default function CarbonCalculator() {
                       { id: 'moderate', title: 'Moderate / Average', desc: 'Occasional purchases of new clothing and goods.' },
                       { id: 'high', title: 'Frequent / High', desc: 'Frequent purchases of new items, electronics, clothing.' }
                     ].map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setShoppingHabit(item.id)}
-                        className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                          shoppingHabit === item.id
-                            ? 'bg-eco-50 border-eco-500 ring-2 ring-eco-500/20'
-                            : 'border-slate-200 hover:border-slate-350'
-                        }`}
-                      >
-                        <h4 className="font-extrabold text-sm text-slate-800">{item.title}</h4>
-                        <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">{item.desc}</p>
+                      <div key={item.id} className="relative">
+                        <input
+                          type="radio"
+                          id={`shopping-${item.id}`}
+                          name="shoppingHabit"
+                          value={item.id}
+                          checked={shoppingHabit === item.id}
+                          onChange={() => setShoppingHabit(item.id)}
+                          className="radio-card-input"
+                        />
+                        <label htmlFor={`shopping-${item.id}`} className="radio-card-label">
+                          <h4 className="font-extrabold text-sm text-slate-800">{item.title}</h4>
+                          <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">{item.desc}</p>
+                        </label>
                       </div>
                     ))}
                   </div>
-                </div>
+                </fieldset>
               )}
             </form>
 
@@ -265,7 +283,7 @@ export default function CarbonCalculator() {
                 disabled={step === 1 || loading}
                 className="inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 font-bold text-xs text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 <span>Back</span>
               </button>
 
@@ -276,7 +294,7 @@ export default function CarbonCalculator() {
                   className="inline-flex items-center space-x-1.5 bg-eco-600 hover:bg-eco-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-md shadow-eco-600/10"
                 >
                   <span>Next</span>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </button>
               ) : (
                 <button
@@ -286,11 +304,13 @@ export default function CarbonCalculator() {
                   className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/10 disabled:opacity-75"
                 >
                   {loading ? (
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" role="status" aria-label="Submitting">
+                      <span className="sr-only">Submitting...</span>
+                    </div>
                   ) : (
                     <>
                       <span>Submit Details</span>
-                      <Leaf className="h-4 w-4" />
+                      <Leaf className="h-4 w-4" aria-hidden="true" />
                     </>
                   )}
                 </button>
@@ -301,15 +321,15 @@ export default function CarbonCalculator() {
       ) : (
         /* RESULTS INTERFACE */
         <div className="space-y-8 animate-fade-in">
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100" aria-labelledby="result-heading">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 pb-6 gap-4">
               <div>
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
                   Result Computed
                 </span>
-                <h3 className="text-4xl font-black text-slate-800 mt-2">
+                <h2 id="result-heading" className="text-4xl font-black text-slate-800 mt-2">
                   {result.total} <span className="text-lg font-medium text-slate-400">kg CO₂ / month</span>
-                </h3>
+                </h2>
               </div>
               <button
                 onClick={handleReset}
@@ -320,52 +340,34 @@ export default function CarbonCalculator() {
             </div>
 
             {/* Breakdown Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">🚗 Transit</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6" role="list" aria-label="Carbon footprint breakdown">
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl" role="listitem">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><span aria-hidden="true">🚗</span> Transit</span>
                 <p className="text-xl font-bold text-slate-800 mt-1">{result.breakdown.transportation} kg</p>
               </div>
-              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">⚡ Electricity</span>
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl" role="listitem">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><span aria-hidden="true">⚡</span> Electricity</span>
                 <p className="text-xl font-bold text-slate-800 mt-1">{result.breakdown.electricity} kg</p>
               </div>
-              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">🥗 Diet & Food</span>
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl" role="listitem">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><span aria-hidden="true">🥗</span> Diet & Food</span>
                 <p className="text-xl font-bold text-slate-800 mt-1">{result.breakdown.food} kg</p>
               </div>
-              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">🛍️ Shopping</span>
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl" role="listitem">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><span aria-hidden="true">🛍️</span> Shopping</span>
                 <p className="text-xl font-bold text-slate-800 mt-1">{result.breakdown.shopping} kg</p>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Gemini AI Advice Card */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-4">
+          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-4" aria-labelledby="ai-advice-heading">
             <div className="flex items-center space-x-2 border-b border-slate-100 pb-4">
-              <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse-soft" />
-              <h3 className="text-lg font-extrabold text-slate-800">Gemini AI Reduction Suggestions</h3>
+              <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse-soft" aria-hidden="true" />
+              <h3 id="ai-advice-heading" className="text-lg font-extrabold text-slate-800">Gemini AI Reduction Suggestions</h3>
             </div>
-            
-            <div className="text-slate-600 text-sm leading-relaxed prose prose-slate max-w-none pr-2">
-              {result.advice ? (
-                result.advice.split('\n').map((line, i) => {
-                  if (line.startsWith('###')) {
-                    return <h4 key={i} className="text-sm font-extrabold text-slate-800 mt-5 mb-2">{line.replace(/###/g, '').trim()}</h4>;
-                  }
-                  if (line.startsWith('####')) {
-                    return <h5 key={i} className="text-xs font-extrabold text-slate-800 mt-4 mb-1">{line.replace(/####/g, '').trim()}</h5>;
-                  }
-                  if (line.startsWith('-') || line.startsWith('*')) {
-                    return <li key={i} className="ml-4 list-disc text-xs my-1">{line.substring(2)}</li>;
-                  }
-                  return <p key={i} className="my-1.5 text-xs">{line}</p>;
-                })
-              ) : (
-                <p className="text-xs text-slate-400 italic">No recommendations could be loaded.</p>
-              )}
-            </div>
-          </div>
+            <MarkdownRenderer content={result.advice} emptyMessage="No recommendations could be loaded." />
+          </section>
         </div>
       )}
     </div>

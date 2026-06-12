@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
 import StatCard from '../components/StatCard';
 import ProgressBar from '../components/ProgressBar';
+import ErrorAlert from '../components/ErrorAlert';
+import LoadingSpinner from '../components/LoadingSpinner';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
   Leaf,
   Activity,
@@ -11,8 +14,7 @@ import {
   TrendingDown,
   Sparkles,
   ArrowRight,
-  PlusCircle,
-  HelpCircle
+  PlusCircle
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,6 +30,13 @@ import {
   Legend
 } from 'recharts';
 
+/** Chart color palette */
+const PIE_COLORS = ['#3b82f6', '#eab308', '#10b981', '#a855f7'];
+
+/**
+ * Dashboard page displaying carbon footprint summary, charts, goals, and AI advice.
+ * @returns {JSX.Element} The dashboard
+ */
 export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
@@ -63,43 +72,40 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-eco-500 border-t-transparent"></div>
-        <p className="text-slate-400 font-semibold">Generating dashboard statistics...</p>
-      </div>
-    );
-  }
-
   // Pre-process charts data
   const latestFootprint = summary?.current || null;
-  const pieData = latestFootprint
-    ? [
-        { name: 'Transportation', value: latestFootprint.breakdown.transportation },
-        { name: 'Electricity', value: latestFootprint.breakdown.electricity },
-        { name: 'Diet & Food', value: latestFootprint.breakdown.food },
-        { name: 'Shopping Habits', value: latestFootprint.breakdown.shopping }
-      ].filter(item => item.value > 0)
-    : [];
 
-  const lineData = history
-    .map(log => ({
-      name: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      CO2: log.total
-    }))
-    .reverse(); // Chronological order (oldest to newest)
+  const pieData = useMemo(() => {
+    if (!latestFootprint) return [];
+    return [
+      { name: 'Transportation', value: latestFootprint.breakdown.transportation },
+      { name: 'Electricity', value: latestFootprint.breakdown.electricity },
+      { name: 'Diet & Food', value: latestFootprint.breakdown.food },
+      { name: 'Shopping Habits', value: latestFootprint.breakdown.shopping }
+    ].filter(item => item.value > 0);
+  }, [latestFootprint]);
 
-  const PIE_COLORS = ['#3b82f6', '#eab308', '#10b981', '#a855f7'];
+  const lineData = useMemo(() => {
+    return history
+      .map(log => ({
+        name: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        CO2: log.total
+      }))
+      .reverse();
+  }, [history]);
+
+  if (loading) {
+    return <LoadingSpinner message="Generating dashboard statistics..." />;
+  }
 
   return (
     <div className="space-y-8 text-left">
       {/* Welcome banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">
+          <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
             Hello, {user?.displayName || 'Eco-Warrior'}!
-          </h2>
+          </h1>
           <p className="text-slate-500 font-medium mt-1">
             Here is your current environmental impact snapshot.
           </p>
@@ -108,20 +114,15 @@ export default function Dashboard() {
           to="/calculator"
           className="inline-flex items-center space-x-2 bg-eco-600 hover:bg-eco-700 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-md shadow-eco-600/10 self-start"
         >
-          <PlusCircle className="h-5 w-5" />
+          <PlusCircle className="h-5 w-5" aria-hidden="true" />
           <span>New Calculation</span>
         </Link>
       </div>
 
-      {error && (
-        <div className="bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold p-4 rounded-2xl flex items-center space-x-3">
-          <HelpCircle className="h-5 w-5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6" aria-label="Carbon footprint statistics">
         <StatCard
           title="Monthly Carbon Footprint"
           value={latestFootprint?.total}
@@ -147,15 +148,15 @@ export default function Dashboard() {
           icon={Zap}
           colorClass="bg-yellow-50 text-yellow-600"
         />
-      </div>
+      </section>
 
       {latestFootprint ? (
         <>
           {/* Charts panels */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Pie Chart: Carbon Sources */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
-              <h3 className="text-base font-extrabold text-slate-800 mb-6">Carbon Footprint Sources</h3>
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between" aria-labelledby="pie-chart-heading">
+              <h2 id="pie-chart-heading" className="text-base font-extrabold text-slate-800 mb-6">Carbon Footprint Sources</h2>
               <div className="h-72 w-full flex items-center justify-center">
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -181,11 +182,11 @@ export default function Dashboard() {
                   <p className="text-slate-400 text-sm font-semibold">Insufficient breakdown data</p>
                 )}
               </div>
-            </div>
+            </section>
 
             {/* Line Chart: History Log */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
-              <h3 className="text-base font-extrabold text-slate-800 mb-6">Carbon Monthly Trend</h3>
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between" aria-labelledby="line-chart-heading">
+              <h2 id="line-chart-heading" className="text-base font-extrabold text-slate-800 mb-6">Carbon Monthly Trend</h2>
               <div className="h-72 w-full">
                 {lineData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -209,21 +210,21 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-            </div>
+            </section>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Active Goals card */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 lg:col-span-1 flex flex-col justify-between space-y-4">
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 lg:col-span-1 flex flex-col justify-between space-y-4" aria-labelledby="goals-heading">
               <div>
-                <h3 className="text-base font-extrabold text-slate-800">Monthly Targets</h3>
+                <h2 id="goals-heading" className="text-base font-extrabold text-slate-800">Monthly Targets</h2>
                 <p className="text-slate-400 text-xs font-semibold mt-1">Your current target challenge</p>
               </div>
 
               {activeGoal ? (
                 <div className="space-y-4 pt-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>Target Target</span>
+                    <span>Current Target</span>
                     <span>Reduce {activeGoal.targetValue} kg CO₂</span>
                   </div>
                   <ProgressBar value={activeGoal.currentProgress} max={activeGoal.targetValue} />
@@ -235,12 +236,12 @@ export default function Dashboard() {
                     className="inline-flex items-center text-xs font-bold text-eco-600 hover:text-eco-700 group pt-2"
                   >
                     <span>Update Goal Progress</span>
-                    <ArrowRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </Link>
                 </div>
               ) : (
                 <div className="py-6 text-center space-y-3">
-                  <TrendingDown className="h-10 w-10 text-slate-300 mx-auto" />
+                  <TrendingDown className="h-10 w-10 text-slate-300 mx-auto" aria-hidden="true" />
                   <p className="text-xs font-semibold text-slate-400">No active goals running</p>
                   <Link
                     to="/goals"
@@ -250,45 +251,30 @@ export default function Dashboard() {
                   </Link>
                 </div>
               )}
-            </div>
+            </section>
 
             {/* AI Advisor Panel */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 lg:col-span-2 space-y-4">
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 lg:col-span-2 space-y-4" aria-labelledby="ai-advisor-heading">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center space-x-2">
-                  <Sparkles className="h-5 w-5 text-indigo-500" />
-                  <h3 className="text-base font-extrabold text-slate-800">Gemini Carbon Advisor</h3>
+                  <Sparkles className="h-5 w-5 text-indigo-500" aria-hidden="true" />
+                  <h2 id="ai-advisor-heading" className="text-base font-extrabold text-slate-800">Gemini Carbon Advisor</h2>
                 </div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md">
                   Active
                 </span>
               </div>
 
-              <div className="text-slate-600 text-sm leading-relaxed prose prose-slate max-w-none max-h-72 overflow-y-auto pr-2">
-                {latestFootprint.advice ? (
-                  latestFootprint.advice.split('\n').map((line, i) => {
-                    if (line.startsWith('###')) {
-                      return <h4 key={i} className="text-sm font-extrabold text-slate-800 mt-4 mb-2">{line.replace(/###/g, '').trim()}</h4>;
-                    }
-                    if (line.startsWith('####')) {
-                      return <h5 key={i} className="text-xs font-extrabold text-slate-800 mt-3 mb-1">{line.replace(/####/g, '').trim()}</h5>;
-                    }
-                    if (line.startsWith('-') || line.startsWith('*')) {
-                      return <li key={i} className="ml-4 list-disc text-xs my-1">{line.substring(2)}</li>;
-                    }
-                    return <p key={i} className="my-1.5 text-xs">{line}</p>;
-                  })
-                ) : (
-                  <p className="text-xs text-slate-400 italic">No recommendations loaded</p>
-                )}
+              <div className="max-h-72 overflow-y-auto pr-2">
+                <MarkdownRenderer content={latestFootprint.advice} emptyMessage="No recommendations loaded" />
               </div>
-            </div>
+            </section>
           </div>
         </>
       ) : (
         <div className="bg-white rounded-3xl p-10 border border-slate-100 text-center space-y-4 max-w-lg mx-auto mt-12">
-          <Leaf className="h-14 w-14 text-eco-400 mx-auto" />
-          <h3 className="text-xl font-bold text-slate-800">Calculate Your First Carbon Footprint</h3>
+          <Leaf className="h-14 w-14 text-eco-400 mx-auto" aria-hidden="true" />
+          <h2 className="text-xl font-bold text-slate-800">Calculate Your First Carbon Footprint</h2>
           <p className="text-slate-500 text-sm leading-relaxed">
             Welcome to EcoLens AI! To load your dashboard and charts, you need to input your habits (driving, home energy, food, shopping) into our footprint calculator.
           </p>

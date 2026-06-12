@@ -2,8 +2,19 @@ const jwt = require('jsonwebtoken');
 const { auth: firebaseAuth, useSimulation } = require('../config/firebase');
 const dbMock = require('../utils/dbMock');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ecolens_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET;
 
+if (!JWT_SECRET && useSimulation) {
+  console.warn('[SECURITY WARNING] JWT_SECRET not set in environment. Using insecure default for simulation mode only.');
+}
+
+/**
+ * Authentication middleware. Validates JWT (simulation mode) or Firebase ID token.
+ * Attaches req.user with uid, email, displayName.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 module.exports = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -15,8 +26,9 @@ module.exports = async (req, res, next) => {
 
     if (useSimulation) {
       // Simulation Mode: Verify custom JWT
+      const secret = JWT_SECRET || 'ecolens_dev_only_secret';
       try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, secret);
         
         // Find user in dbMock
         const user = dbMock.findOne('users', u => u.id === decoded.uid);
@@ -36,6 +48,9 @@ module.exports = async (req, res, next) => {
       }
     } else {
       // Firebase Mode: Verify Firebase ID Token
+      if (!JWT_SECRET) {
+        console.error('[SECURITY] JWT_SECRET must be set in production mode');
+      }
       try {
         const decodedToken = await firebaseAuth.verifyIdToken(token);
         req.user = {

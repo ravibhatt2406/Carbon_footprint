@@ -1,22 +1,26 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Leaf, Award, QrCode, LineChart, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Leaf, QrCode, LineChart, ArrowRight } from 'lucide-react';
 
+/**
+ * Public landing page showcasing EcoLens AI features.
+ * @returns {JSX.Element} The landing page
+ */
 export default function LandingPage() {
   const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Navbar */}
-      <header className="max-w-7xl w-full mx-auto px-6 h-20 flex items-center justify-between z-10">
+      <header className="max-w-7xl w-full mx-auto px-6 h-20 flex items-center justify-between z-10" role="banner">
         <div className="flex items-center space-x-2">
           <div className="p-1.5 bg-eco-500 rounded-lg">
-            <Leaf className="h-5 w-5 text-white" />
+            <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
           </div>
           <span className="font-extrabold text-xl tracking-tight text-slate-800">EcoLens AI</span>
         </div>
-        <div className="flex items-center space-x-4">
+        <nav aria-label="Landing page navigation" className="flex items-center space-x-4">
           {user ? (
             <Link
               to="/dashboard"
@@ -37,7 +41,7 @@ export default function LandingPage() {
               </Link>
             </>
           )}
-        </div>
+        </nav>
       </header>
 
       {/* Hero Section */}
@@ -46,9 +50,9 @@ export default function LandingPage() {
           <span className="inline-block self-start text-xs font-bold uppercase tracking-widest text-eco-700 bg-eco-100 px-3 py-1 rounded-full">
             EcoLens AI – Carbon Tracker & AI Advisor
           </span>
-          <h2 className="text-4xl md:text-6xl font-black text-slate-800 tracking-tight leading-tight">
+          <h1 className="text-4xl md:text-6xl font-black text-slate-800 tracking-tight leading-tight">
             Track, Reduce, and <span className="text-eco-600">Neutralize</span> Your Carbon Footprint.
-          </h2>
+          </h1>
           <p className="text-slate-500 text-base md:text-lg leading-relaxed max-w-lg">
             Understand your impact, complete gamified challenges, set emission targets, and get intelligent AI advice on reducing your carbon footprint using Google Gemini.
           </p>
@@ -59,7 +63,7 @@ export default function LandingPage() {
                 className="bg-eco-600 hover:bg-eco-700 text-white font-bold px-8 py-4 rounded-2xl flex items-center justify-center space-x-2 transition-all shadow-lg shadow-eco-600/20"
               >
                 <span>Go to Dashboard</span>
-                <ArrowRight className="h-5 w-5" />
+                <ArrowRight className="h-5 w-5" aria-hidden="true" />
               </Link>
             ) : (
               <>
@@ -68,7 +72,7 @@ export default function LandingPage() {
                   className="bg-eco-600 hover:bg-eco-700 text-white font-bold px-8 py-4 rounded-2xl flex items-center justify-center space-x-2 transition-all shadow-lg shadow-eco-600/20"
                 >
                   <span>Start Free Tracker</span>
-                  <ArrowRight className="h-5 w-5" />
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
                 </Link>
                 <Link
                   to="/login"
@@ -82,7 +86,7 @@ export default function LandingPage() {
         </div>
 
         {/* Visual / Image Section */}
-        <div className="md:w-1/2 relative flex items-center justify-center">
+        <div className="md:w-1/2 relative flex items-center justify-center" aria-hidden="true">
           <div className="absolute -inset-4 bg-eco-200/40 rounded-full blur-3xl -z-10 animate-pulse-soft"></div>
           <div className="bg-gradient-to-br from-eco-50 to-emerald-100/40 border border-eco-100 p-8 rounded-3xl shadow-xl max-w-md w-full relative">
             <h4 className="text-sm font-extrabold text-slate-400 uppercase tracking-widest">Calculated Sample</h4>
@@ -119,43 +123,43 @@ export default function LandingPage() {
       </main>
 
       {/* Features Grid */}
-      <section className="bg-white border-t border-slate-100 py-20 px-6">
+      <section className="bg-white border-t border-slate-100 py-20 px-6" aria-labelledby="features-heading">
         <div className="max-w-7xl w-full mx-auto">
           <div className="text-center max-w-2xl mx-auto space-y-4 mb-16">
-            <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">Features Packed for Practical Impact</h3>
+            <h2 id="features-heading" className="text-3xl font-extrabold text-slate-800 tracking-tight">Features Packed for Practical Impact</h2>
             <p className="text-slate-500 font-medium">Simple trackers, advanced intelligence. Designed for students, households, and green enthusiasts.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100/60 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8" role="list" aria-label="Key features">
+            <article className="p-8 rounded-3xl bg-slate-50 border border-slate-100/60 space-y-4" role="listitem">
               <div className="p-3 bg-eco-500 text-white rounded-2xl w-fit">
-                <Leaf className="h-6 w-6" />
+                <Leaf className="h-6 w-6" aria-hidden="true" />
               </div>
-              <h4 className="text-lg font-bold text-slate-800">Footprint Calculator</h4>
+              <h3 className="text-lg font-bold text-slate-800">Footprint Calculator</h3>
               <p className="text-slate-500 text-sm leading-relaxed">Input your driving, public transit, home energy, and shopping habits to view a detailed breakdown of carbon emissions.</p>
-            </div>
+            </article>
 
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100/60 space-y-4">
+            <article className="p-8 rounded-3xl bg-slate-50 border border-slate-100/60 space-y-4" role="listitem">
               <div className="p-3 bg-indigo-500 text-white rounded-2xl w-fit">
-                <LineChart className="h-6 w-6" />
+                <LineChart className="h-6 w-6" aria-hidden="true" />
               </div>
-              <h4 className="text-lg font-bold text-slate-800">AI Carbon Advisor</h4>
+              <h3 className="text-lg font-bold text-slate-800">AI Carbon Advisor</h3>
               <p className="text-slate-500 text-sm leading-relaxed">Integrated Google Gemini AI processes your results to generate customized reduction tips, numbers, and challenges.</p>
-            </div>
+            </article>
 
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100/60 space-y-4">
+            <article className="p-8 rounded-3xl bg-slate-50 border border-slate-100/60 space-y-4" role="listitem">
               <div className="p-3 bg-emerald-500 text-white rounded-2xl w-fit">
-                <QrCode className="h-6 w-6" />
+                <QrCode className="h-6 w-6" aria-hidden="true" />
               </div>
-              <h4 className="text-lg font-bold text-slate-800">Bill & Receipt OCR</h4>
+              <h3 className="text-lg font-bold text-slate-800">Bill & Receipt OCR</h3>
               <p className="text-slate-500 text-sm leading-relaxed">Upload shopping receipts or electric utility invoices. Gemini Vision parses items or kWh numbers to calculate direct emissions.</p>
-            </div>
+            </article>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-10 px-6 border-t border-slate-850 mt-auto text-center text-sm font-medium">
+      <footer className="bg-slate-900 text-slate-400 py-10 px-6 border-t border-slate-850 mt-auto text-center text-sm font-medium" role="contentinfo">
         <p>© 2026 EcoLens AI. Dedicated to a greener, carbon-neutral tomorrow.</p>
       </footer>
     </div>

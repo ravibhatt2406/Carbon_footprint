@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import ProgressBar from '../components/ProgressBar';
+import ErrorAlert from '../components/ErrorAlert';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { Target, Calendar, PlusCircle, CheckCircle, HelpCircle } from 'lucide-react';
 
+/**
+ * Goals page for creating and tracking carbon reduction targets.
+ * @returns {JSX.Element} The goals page
+ */
 export default function Goals() {
   const { refreshPoints } = useAuth();
   const [goals, setGoals] = useState([]);
@@ -18,7 +24,7 @@ export default function Goals() {
   // Update progress input states
   const [updateVal, setUpdateVal] = useState({});
 
-  const loadGoals = async () => {
+  const loadGoals = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.get('/goals');
@@ -29,13 +35,13 @@ export default function Goals() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadGoals();
-  }, []);
+  }, [loadGoals]);
 
-  const handleCreateGoal = async (e) => {
+  const handleCreateGoal = useCallback(async (e) => {
     e.preventDefault();
     if (!targetValue || Number(targetValue) <= 0) return;
 
@@ -53,9 +59,9 @@ export default function Goals() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [targetValue, days, loadGoals]);
 
-  const handleUpdateProgress = async (goalId) => {
+  const handleUpdateProgress = useCallback(async (goalId) => {
     const progressVal = Number(updateVal[goalId]);
     if (isNaN(progressVal) || progressVal < 0) return;
 
@@ -69,48 +75,40 @@ export default function Goals() {
       console.error('Failed to update progress:', err);
       setError('Failed to update goal progress.');
     }
-  };
+  }, [updateVal, loadGoals, refreshPoints]);
+
+  const activeGoals = useMemo(() => goals.filter(g => !g.completed), [goals]);
+  const completedGoals = useMemo(() => goals.filter(g => g.completed), [goals]);
 
   if (loading && goals.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-eco-500 border-t-transparent"></div>
-        <p className="text-slate-400 font-semibold">Loading your carbon reduction goals...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading your carbon reduction goals..." />;
   }
-
-  const activeGoals = goals.filter(g => !g.completed);
-  const completedGoals = goals.filter(g => g.completed);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 text-left">
       <div>
-        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Carbon Reduction Goals</h2>
+        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Carbon Reduction Goals</h1>
         <p className="text-slate-500 font-medium mt-1">Set monthly carbon footprint targets and log actions taken to achieve them.</p>
       </div>
 
-      {error && (
-        <div className="bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold p-4 rounded-2xl flex items-center space-x-2">
-          <HelpCircle className="h-5 w-5" />
-          <span>{error}</span>
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* CREATE GOAL PANEL */}
-        <div className="lg:col-span-1">
+        <section className="lg:col-span-1" aria-labelledby="create-goal-heading">
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-5 sticky top-6">
-            <h3 className="text-base font-extrabold text-slate-800 flex items-center space-x-2">
-              <PlusCircle className="h-5 w-5 text-eco-500" />
+            <h2 id="create-goal-heading" className="text-base font-extrabold text-slate-800 flex items-center space-x-2">
+              <PlusCircle className="h-5 w-5 text-eco-500" aria-hidden="true" />
               <span>Set Carbon Target</span>
-            </h3>
+            </h2>
 
-            <form onSubmit={handleCreateGoal} className="space-y-4">
+            <form onSubmit={handleCreateGoal} className="space-y-4" noValidate>
               <div className="flex flex-col space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Reduction Target (kg CO₂)</label>
+                <label htmlFor="goal-target-value" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Reduction Target (kg CO₂)</label>
                 <input
+                  id="goal-target-value"
+                  name="targetValue"
                   type="number"
                   min="1"
                   required
@@ -122,8 +120,10 @@ export default function Goals() {
               </div>
 
               <div className="flex flex-col space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Target Period</label>
+                <label htmlFor="goal-target-period" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Target Period</label>
                 <select
+                  id="goal-target-period"
+                  name="days"
                   value={days}
                   onChange={(e) => setDays(e.target.value)}
                   className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-eco-500 bg-white"
@@ -144,27 +144,27 @@ export default function Goals() {
               </button>
             </form>
           </div>
-        </div>
+        </section>
 
         {/* GOALS TRACKING PANEL */}
         <div className="lg:col-span-2 space-y-6">
           
           {/* Active Goals Section */}
-          <div className="space-y-4">
-            <h3 className="text-base font-extrabold text-slate-700">Active Goals</h3>
+          <section className="space-y-4" aria-labelledby="active-goals-heading">
+            <h2 id="active-goals-heading" className="text-base font-extrabold text-slate-700">Active Goals</h2>
             {activeGoals.length > 0 ? (
               <div className="grid grid-cols-1 gap-4">
                 {activeGoals.map((goal) => (
-                  <div key={goal.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-5">
+                  <article key={goal.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="p-2.5 bg-eco-50 text-eco-600 rounded-xl">
-                          <Target className="h-5 w-5" />
+                          <Target className="h-5 w-5" aria-hidden="true" />
                         </div>
                         <div>
-                          <h4 className="font-extrabold text-sm text-slate-800">Reduce {goal.targetValue} kg CO₂</h4>
+                          <h3 className="font-extrabold text-sm text-slate-800">Reduce {goal.targetValue} kg CO₂</h3>
                           <p className="text-[10px] text-slate-400 font-semibold mt-0.5 flex items-center">
-                            <Calendar className="h-3 w-3 mr-1" />
+                            <Calendar className="h-3 w-3 mr-1" aria-hidden="true" />
                             Started {new Date(goal.startDate).toLocaleDateString()} • Ends {new Date(goal.endDate).toLocaleDateString()}
                           </p>
                         </div>
@@ -177,9 +177,12 @@ export default function Goals() {
                     <ProgressBar value={goal.currentProgress} max={goal.targetValue} />
 
                     <div className="flex items-center space-x-3 pt-3 border-t border-slate-50">
+                      <label htmlFor={`progress-${goal.id}`} className="sr-only">Log reduction in kg for goal: Reduce {goal.targetValue} kg CO₂</label>
                       <input
+                        id={`progress-${goal.id}`}
                         type="number"
                         min="0"
+                        name="currentProgress"
                         placeholder="Log reduction (kg)..."
                         value={updateVal[goal.id] || ''}
                         onChange={(e) => setUpdateVal(prev => ({ ...prev, [goal.id]: e.target.value }))}
@@ -192,7 +195,7 @@ export default function Goals() {
                         Update Progress
                       </button>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             ) : (
@@ -200,21 +203,21 @@ export default function Goals() {
                 You have no active targets set. Create one using the form on the left!
               </div>
             )}
-          </div>
+          </section>
 
           {/* Completed Goals Section */}
-          <div className="space-y-4">
-            <h3 className="text-base font-extrabold text-slate-700">Completed Goals</h3>
+          <section className="space-y-4" aria-labelledby="completed-goals-heading">
+            <h2 id="completed-goals-heading" className="text-base font-extrabold text-slate-700">Completed Goals</h2>
             {completedGoals.length > 0 ? (
               <div className="grid grid-cols-1 gap-4">
                 {completedGoals.map((goal) => (
-                  <div key={goal.id} className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex items-center justify-between gap-4">
+                  <article key={goal.id} className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex items-center justify-between gap-4">
                     <div className="flex items-center space-x-3">
                       <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                        <CheckCircle className="h-5 w-5" />
+                        <CheckCircle className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-sm text-slate-800 line-through">Reduce {goal.targetValue} kg CO₂</h4>
+                        <h3 className="font-extrabold text-sm text-slate-800 line-through">Reduce {goal.targetValue} kg CO₂</h3>
                         <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
                           Achieved on {new Date(goal.updatedAt || goal.startDate).toLocaleDateString()}
                         </p>
@@ -223,7 +226,7 @@ export default function Goals() {
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
                       Success
                     </span>
-                  </div>
+                  </article>
                 ))}
               </div>
             ) : (
@@ -231,7 +234,7 @@ export default function Goals() {
                 Completed targets will show up here.
               </div>
             )}
-          </div>
+          </section>
 
         </div>
 
