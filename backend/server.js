@@ -19,7 +19,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security: HTTP headers hardening
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // Security: Rate limiting — general API
 const generalLimiter = rateLimit({
@@ -27,6 +29,7 @@ const generalLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Skip preflight options requests from counting against rate limit
   message: { error: 'Too many requests, please try again later.' }
 });
 app.use(generalLimiter);
@@ -37,13 +40,14 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Skip preflight options requests from counting against rate limit
   message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
 // Enable CORS with explicit origins
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : ['https://ecolensaicarbonfootprint.netlify.app', 'http://localhost:5173'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -52,11 +56,14 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    // Return callback(null, false) instead of throwing an Error to prevent crashing
+    // preflight requests and avoid general 500 error propagation.
+    return callback(null, false);
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 204
 }));
 
 // Body-parsing middleware
