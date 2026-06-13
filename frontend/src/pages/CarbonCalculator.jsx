@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { api } from '../utils/api';
-import { useAuth } from '../context/AuthContext';
+import React from 'react';
+import { useFootprintCalculator } from '../hooks/useFootprintCalculator';
+import { CALCULATOR_STEPS, FOOD_OPTIONS, SHOPPING_OPTIONS } from '../utils/constants';
 import ErrorAlert from '../components/ErrorAlert';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
@@ -14,80 +14,25 @@ import {
   Sparkles
 } from 'lucide-react';
 
+/** Maps step IDs to their icon components */
+const STEP_ICONS = { 1: Car, 2: Zap, 3: Utensils, 4: ShoppingBag };
+
 /**
  * Multi-step carbon footprint calculator page.
  * Collects transportation, electricity, food, and shopping data.
+ * Uses the useFootprintCalculator hook for all state management.
  * @returns {JSX.Element} The calculator page
  */
 export default function CarbonCalculator() {
-  const { refreshPoints } = useAuth();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-
-  // Form states
-  const [carKm, setCarKm] = useState(0);
-  const [bikeKm, setBikeKm] = useState(0);
-  const [busKm, setBusKm] = useState(0);
-  const [trainKm, setTrainKm] = useState(0);
-  const [electricityKwh, setElectricityKwh] = useState(0);
-  const [foodHabit, setFoodHabit] = useState('mixed');
-  const [shoppingHabit, setShoppingHabit] = useState('moderate');
-
-  const stepsList = [
-    { id: 1, title: 'Transportation', icon: Car },
-    { id: 2, title: 'Electricity', icon: Zap },
-    { id: 3, title: 'Food & Diet', icon: Utensils },
-    { id: 4, title: 'Shopping', icon: ShoppingBag }
-  ];
-
-  const handleNext = () => {
-    if (step < 4) setStep(step + 1);
-  };
-
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const payload = {
-      carKm: Number(carKm),
-      bikeKm: Number(bikeKm),
-      busKm: Number(busKm),
-      trainKm: Number(trainKm),
-      electricityKwh: Number(electricityKwh),
-      foodHabit,
-      shoppingHabit
-    };
-
-    try {
-      const response = await api.post('/footprint-logs', payload);
-      setResult(response);
-      await refreshPoints(); // Reload user points in header if a new badge was awarded
-    } catch (err) {
-      console.error('Submit footprint calculation error:', err);
-      setError('Failed to compute carbon values. Please check backend connection.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setResult(null);
-    setStep(1);
-    setCarKm(0);
-    setBikeKm(0);
-    setBusKm(0);
-    setTrainKm(0);
-    setElectricityKwh(0);
-    setFoodHabit('mixed');
-    setShoppingHabit('moderate');
-  };
+  const {
+    step, loading, result, error,
+    carKm, setCarKm, bikeKm, setBikeKm,
+    busKm, setBusKm, trainKm, setTrainKm,
+    electricityKwh, setElectricityKwh,
+    foodHabit, setFoodHabit,
+    shoppingHabit, setShoppingHabit,
+    handleNext, handleBack, handleSubmit, handleReset,
+  } = useFootprintCalculator();
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 text-left">
@@ -102,8 +47,8 @@ export default function CarbonCalculator() {
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Steps Side Navigator */}
           <div className="md:col-span-1 border-r border-slate-100 md:pr-6 space-y-4" role="group" aria-label="Calculator steps">
-            {stepsList.map((s) => {
-              const StepIcon = s.icon;
+            {CALCULATOR_STEPS.map((s) => {
+              const StepIcon = STEP_ICONS[s.id];
               const isCurrent = step === s.id;
               const isPassed = step > s.id;
 
@@ -138,51 +83,19 @@ export default function CarbonCalculator() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col space-y-1">
                       <label htmlFor="calc-car-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Car (km)</label>
-                      <input
-                        id="calc-car-km"
-                        name="carKm"
-                        type="number"
-                        min="0"
-                        value={carKm}
-                        onChange={(e) => setCarKm(e.target.value)}
-                        className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium"
-                      />
+                      <input id="calc-car-km" name="carKm" type="number" min="0" value={carKm} onChange={(e) => setCarKm(e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium" />
                     </div>
                     <div className="flex flex-col space-y-1">
                       <label htmlFor="calc-bike-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bicycle (km)</label>
-                      <input
-                        id="calc-bike-km"
-                        name="bikeKm"
-                        type="number"
-                        min="0"
-                        value={bikeKm}
-                        onChange={(e) => setBikeKm(e.target.value)}
-                        className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium"
-                      />
+                      <input id="calc-bike-km" name="bikeKm" type="number" min="0" value={bikeKm} onChange={(e) => setBikeKm(e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium" />
                     </div>
                     <div className="flex flex-col space-y-1">
                       <label htmlFor="calc-bus-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bus (km)</label>
-                      <input
-                        id="calc-bus-km"
-                        name="busKm"
-                        type="number"
-                        min="0"
-                        value={busKm}
-                        onChange={(e) => setBusKm(e.target.value)}
-                        className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium"
-                      />
+                      <input id="calc-bus-km" name="busKm" type="number" min="0" value={busKm} onChange={(e) => setBusKm(e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium" />
                     </div>
                     <div className="flex flex-col space-y-1">
                       <label htmlFor="calc-train-km" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Train (km)</label>
-                      <input
-                        id="calc-train-km"
-                        name="trainKm"
-                        type="number"
-                        min="0"
-                        value={trainKm}
-                        onChange={(e) => setTrainKm(e.target.value)}
-                        className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium"
-                      />
+                      <input id="calc-train-km" name="trainKm" type="number" min="0" value={trainKm} onChange={(e) => setTrainKm(e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium" />
                     </div>
                   </div>
                 </fieldset>
@@ -196,16 +109,7 @@ export default function CarbonCalculator() {
                   
                   <div className="flex flex-col space-y-1 max-w-sm">
                     <label htmlFor="calc-electricity" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly Energy (kWh)</label>
-                    <input
-                      id="calc-electricity"
-                      name="electricityKwh"
-                      type="number"
-                      min="0"
-                      value={electricityKwh}
-                      onChange={(e) => setElectricityKwh(e.target.value)}
-                      placeholder="e.g. 250"
-                      className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium"
-                    />
+                    <input id="calc-electricity" name="electricityKwh" type="number" min="0" value={electricityKwh} onChange={(e) => setElectricityKwh(e.target.value)} placeholder="e.g. 250" className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium" />
                   </div>
                 </fieldset>
               )}
@@ -217,21 +121,9 @@ export default function CarbonCalculator() {
                   <p className="text-xs text-slate-400">Select the option that matches your weekly food habits best.</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {[
-                      { id: 'vegetarian', title: 'Vegetarian', desc: 'No meat, plant and dairy products.' },
-                      { id: 'mixed', title: 'Mixed Diet', desc: 'Poultry, fish, vegetables, occasional beef.' },
-                      { id: 'non-vegetarian', title: 'Non-Vegetarian', desc: 'Frequent red meat, poultry, dairy.' }
-                    ].map((item) => (
+                    {FOOD_OPTIONS.map((item) => (
                       <div key={item.id} className="relative">
-                        <input
-                          type="radio"
-                          id={`food-${item.id}`}
-                          name="foodHabit"
-                          value={item.id}
-                          checked={foodHabit === item.id}
-                          onChange={() => setFoodHabit(item.id)}
-                          className="radio-card-input"
-                        />
+                        <input type="radio" id={`food-${item.id}`} name="foodHabit" value={item.id} checked={foodHabit === item.id} onChange={() => setFoodHabit(item.id)} className="radio-card-input" />
                         <label htmlFor={`food-${item.id}`} className="radio-card-label">
                           <h4 className="font-extrabold text-sm text-slate-800">{item.title}</h4>
                           <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">{item.desc}</p>
@@ -249,21 +141,9 @@ export default function CarbonCalculator() {
                   <p className="text-xs text-slate-400">Select your purchasing level for clothing, goods, and electronics.</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {[
-                      { id: 'low', title: 'Minimal / Low', desc: 'Minimal clothing, gadgets, mostly second-hand.' },
-                      { id: 'moderate', title: 'Moderate / Average', desc: 'Occasional purchases of new clothing and goods.' },
-                      { id: 'high', title: 'Frequent / High', desc: 'Frequent purchases of new items, electronics, clothing.' }
-                    ].map((item) => (
+                    {SHOPPING_OPTIONS.map((item) => (
                       <div key={item.id} className="relative">
-                        <input
-                          type="radio"
-                          id={`shopping-${item.id}`}
-                          name="shoppingHabit"
-                          value={item.id}
-                          checked={shoppingHabit === item.id}
-                          onChange={() => setShoppingHabit(item.id)}
-                          className="radio-card-input"
-                        />
+                        <input type="radio" id={`shopping-${item.id}`} name="shoppingHabit" value={item.id} checked={shoppingHabit === item.id} onChange={() => setShoppingHabit(item.id)} className="radio-card-input" />
                         <label htmlFor={`shopping-${item.id}`} className="radio-card-label">
                           <h4 className="font-extrabold text-sm text-slate-800">{item.title}</h4>
                           <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">{item.desc}</p>

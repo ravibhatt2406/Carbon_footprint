@@ -1,8 +1,11 @@
-const { db, useSimulation } = require('../config/firebase');
-const dbMock = require('../utils/dbMock');
+const { findDocuments, findOneDocument, insertDocument, updateDocument } = require('../utils/dataAccess');
 const geminiService = require('../services/geminiService');
 const badgeController = require('./badgeController');
 
+/**
+ * Returns the ISO date string of Monday of the current week.
+ * @returns {string} Date string in YYYY-MM-DD format
+ */
 const getStartOfWeek = () => {
   const now = new Date();
   const day = now.getDay();
@@ -14,36 +17,27 @@ const getStartOfWeek = () => {
 
 const challengeController = {
   /**
-   * Retrieves the current week's challenges. If none exist, generates them.
+   * Retrieves the current week's challenges. If none exist, generates them via Gemini AI.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
    */
   async getWeekly(req, res) {
     try {
       const { uid } = req.user;
       const weekStart = getStartOfWeek();
-      let activeChallenges = [];
 
       // 1. Fetch user profile to get points for prompt personalization
-      let userPoints = 0;
-      if (useSimulation) {
-        const user = dbMock.findOne('users', u => u.id === uid);
-        userPoints = user ? (user.points || 0) : 0;
-      } else {
-        const userDoc = await db.collection('users').doc(uid).get();
-        userPoints = userDoc.exists ? (userDoc.data().points || 0) : 0;
-      }
+      const user = await findOneDocument('users', u => u.id === uid, uid);
+      const userPoints = user ? (user.points || 0) : 0;
 
       // 2. Fetch existing challenges for the current week
-      if (useSimulation) {
-        activeChallenges = dbMock.find('challenges', c => c.userId === uid && c.weekStartDate === weekStart);
-      } else {
-        const snapshot = await db.collection('challenges')
-          .where('userId', '==', uid)
-          .where('weekStartDate', '==', weekStart)
-          .get();
-        snapshot.forEach(doc => {
-          activeChallenges.push({ id: doc.id, ...doc.data() });
-        });
-      }
+      let activeChallenges = await findDocuments('challenges', {
+        filterFn: c => c.userId === uid && c.weekStartDate === weekStart,
+        where: [
+          { field: 'userId', op: '==', value: uid },
+          { field: 'weekStartDate', op: '==', value: weekStart }
+        ]
+      });
 
       // 3. If no challenges exist for this week, generate them using Gemini / fallback
       if (activeChallenges.length === 0) {
@@ -61,13 +55,8 @@ const challengeController = {
 
         activeChallenges = [];
         for (const chData of listToSave) {
-          if (useSimulation) {
-            const saved = dbMock.insert('challenges', chData);
-            activeChallenges.push(saved);
-          } else {
-            const ref = await db.collection('challenges').add(chData);
-            activeChallenges.push({ id: ref.id, ...chData });
-          }
+          const saved = await insertDocument('challenges', chData);
+          activeChallenges.push(saved);
         }
       }
 
@@ -79,79 +68,42 @@ const challengeController = {
   },
 
   /**
-   * Marks a challenge as completed and awards points to the user
+   * Marks a challenge as completed and awards points to the user.
+   * Triggers badge evaluation after awarding points.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
    */
   async complete(req, res) {
     try {
       const { uid } = req.user;
       const { id } = req.params;
-      let challenge = null;
 
-      if (useSimulation) {
-        challenge = dbMock.findById('challenges', id);
-        if (!challenge || challenge.userId !== uid) {
-          return res.status(404).json({ error: 'Challenge not found' });
-        }
-
-        if (challenge.completed) {
-          return res.status(400).json({ error: 'Challenge is already completed' });
-        }
-
-        // 1. Mark challenge complete
-        const updatedChallenge = dbMock.update('challenges', id, {
-          completed: true,
-          dateCompleted: new Date().toISOString()
-        });
-
-        // 2. Award points to user
-        const user = dbMock.findOne('users', u => u.id === uid);
-        if (user) {
-          const currentPoints = user.points || 0;
-          dbMock.update('users', uid, { points: currentPoints + challenge.points });
-        }
-
-        // 3. Evaluate badges
-        await badgeController.evaluateFootprintBadges(uid);
-
-        return res.json(updatedChallenge);
-      } else {
-        // Firestore mode
-        const challengeRef = db.collection('challenges').doc(id);
-        const challengeDoc = await challengeRef.get();
-
-        if (!challengeDoc.exists || challengeDoc.data().userId !== uid) {
-          return res.status(404).json({ error: 'Challenge not found' });
-        }
-
-        const data = challengeDoc.data();
-        if (data.completed) {
-          return res.status(400).json({ error: 'Challenge is already completed' });
-        }
-
-        // 1. Mark complete
-        await challengeRef.update({
-          completed: true,
-          dateCompleted: new Date().toISOString()
-        });
-
-        // 2. Award points
-        const userRef = db.collection('users').doc(uid);
-        const userDoc = await userRef.get();
-        if (userDoc.exists) {
-          const currentPoints = userDoc.data().points || 0;
-          await userRef.update({ points: currentPoints + data.points });
-        }
-
-        // 3. Evaluate badges
-        await badgeController.evaluateFootprintBadges(uid);
-
-        return res.json({
-          id,
-          ...data,
-          completed: true,
-          dateCompleted: new Date().toISOString()
-        });
+      const challenge = await findOneDocument('challenges', c => c.id === id, id);
+      if (!challenge || challenge.userId !== uid) {
+        return res.status(404).json({ error: 'Challenge not found' });
       }
+
+      if (challenge.completed) {
+        return res.status(400).json({ error: 'Challenge is already completed' });
+      }
+
+      // 1. Mark challenge complete
+      const updatedChallenge = await updateDocument('challenges', id, {
+        completed: true,
+        dateCompleted: new Date().toISOString()
+      });
+
+      // 2. Award points to user
+      const user = await findOneDocument('users', u => u.id === uid, uid);
+      if (user) {
+        const currentPoints = user.points || 0;
+        await updateDocument('users', uid, { points: currentPoints + challenge.points });
+      }
+
+      // 3. Evaluate badges
+      await badgeController.evaluateFootprintBadges(uid);
+
+      return res.json(updatedChallenge);
     } catch (error) {
       console.error('Complete challenge error:', error);
       res.status(500).json({ error: 'Failed to complete challenge' });

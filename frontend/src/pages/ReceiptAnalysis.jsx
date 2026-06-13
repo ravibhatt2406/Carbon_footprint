@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { api } from '../utils/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { parseDocument } from '../services/ocrService';
 import ErrorAlert from '../components/ErrorAlert';
 import { FileUp, Sparkles, FileText } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
 /**
  * Receipt & bill OCR analysis page. Uploads documents for Gemini Vision parsing.
+ * Uses the ocrService for API calls and includes proper object URL cleanup.
  * @returns {JSX.Element} The receipt analysis page
  */
 export default function ReceiptAnalysis() {
@@ -15,9 +16,23 @@ export default function ReceiptAnalysis() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
-  const handleFileChange = (e) => {
+  // Cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = useCallback((e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
+
+    // Revoke previous URL before creating a new one
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
 
     setFile(selectedFile);
     setResult(null);
@@ -30,9 +45,9 @@ export default function ReceiptAnalysis() {
     } else {
       setPreviewUrl(''); // No preview for PDF
     }
-  };
+  }, [previewUrl]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!file) return;
 
@@ -43,7 +58,7 @@ export default function ReceiptAnalysis() {
     formData.append('file', file);
 
     try {
-      const response = await api.post('/ocr/parse', formData);
+      const response = await parseDocument(formData);
       if (response.success) {
         setResult(response.data);
       } else {
@@ -55,14 +70,17 @@ export default function ReceiptAnalysis() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [file]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setFile(null);
     setPreviewUrl('');
     setResult(null);
     setError('');
-  };
+  }, [previewUrl]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 text-left">

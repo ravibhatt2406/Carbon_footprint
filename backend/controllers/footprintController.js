@@ -1,11 +1,13 @@
-const { db, useSimulation } = require('../config/firebase');
-const dbMock = require('../utils/dbMock');
+const { findDocuments, insertDocument, findOneDocument, useSimulation } = require('../utils/dataAccess');
 const { calculateFootprint } = require('../utils/emissionFactors');
 const geminiService = require('../services/geminiService');
 
 const footprintController = {
   /**
-   * Calculates carbon footprint, requests Gemini advice, and saves the log
+   * Calculates carbon footprint, requests Gemini advice, and saves the log.
+   * Awards the "Beginner" badge on first calculation.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
    */
   async create(req, res) {
     try {
@@ -32,48 +34,29 @@ const footprintController = {
         date: new Date().toISOString()
       };
 
-      let savedRecord;
+      const savedRecord = await insertDocument('footprints', footprintData);
 
-      if (useSimulation) {
-        // Mock save
-        savedRecord = dbMock.insert('footprints', footprintData);
+      // Check for "Beginner" badge awarding if it's the first calculation
+      const priorFootprints = await findDocuments('footprints', {
+        filterFn: f => f.userId === uid,
+        where: [{ field: 'userId', op: '==', value: uid }],
+        limit: 2
+      });
 
-        // Check for "Beginner" badge awarding if it's the first calculation
-        const priorFootprints = dbMock.find('footprints', f => f.userId === uid);
-        if (priorFootprints.length === 1) { // Only the newly added one exists
-          const existingBadge = dbMock.findOne('badges', b => b.userId === uid && b.badgeType === 'beginner');
-          if (!existingBadge) {
-            dbMock.insert('badges', {
-              userId: uid,
-              badgeType: 'beginner',
-              title: 'Eco Beginner',
-              description: 'Completed your first carbon footprint calculation!',
-              unlockedAt: new Date().toISOString()
-            });
-          }
-        }
-      } else {
-        // Firebase Firestore save
-        const ref = await db.collection('footprints').add(footprintData);
-        savedRecord = { id: ref.id, ...footprintData };
+      if (priorFootprints.length === 1) {
+        const existingBadge = await findOneDocument(
+          'badges',
+          b => b.userId === uid && b.badgeType === 'beginner'
+        );
 
-        // Badge check: First footprint calculation
-        const userFootprints = await db.collection('footprints').where('userId', '==', uid).limit(2).get();
-        if (userFootprints.size === 1) {
-          const badgesQuery = await db.collection('badges')
-            .where('userId', '==', uid)
-            .where('badgeType', '==', 'beginner')
-            .get();
-
-          if (badgesQuery.empty) {
-            await db.collection('badges').add({
-              userId: uid,
-              badgeType: 'beginner',
-              title: 'Eco Beginner',
-              description: 'Completed your first carbon footprint calculation!',
-              unlockedAt: new Date().toISOString()
-            });
-          }
+        if (!existingBadge) {
+          await insertDocument('badges', {
+            userId: uid,
+            badgeType: 'beginner',
+            title: 'Eco Beginner',
+            description: 'Completed your first carbon footprint calculation!',
+            unlockedAt: new Date().toISOString()
+          });
         }
       }
 
@@ -85,27 +68,19 @@ const footprintController = {
   },
 
   /**
-   * Fetches all carbon calculation logs for the user
+   * Fetches all carbon calculation logs for the authenticated user.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
    */
   async getHistory(req, res) {
     try {
       const { uid } = req.user;
-      let logs = [];
-
-      if (useSimulation) {
-        logs = dbMock.find('footprints', f => f.userId === uid);
-        // Sort by date descending
-        logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-      } else {
-        const snapshot = await db.collection('footprints')
-          .where('userId', '==', uid)
-          .orderBy('date', 'desc')
-          .get();
-        
-        snapshot.forEach(doc => {
-          logs.push({ id: doc.id, ...doc.data() });
-        });
-      }
+      const logs = await findDocuments('footprints', {
+        filterFn: f => f.userId === uid,
+        where: [{ field: 'userId', op: '==', value: uid }],
+        orderBy: 'date',
+        orderDir: 'desc'
+      });
 
       res.json(logs);
     } catch (error) {
@@ -115,26 +90,20 @@ const footprintController = {
   },
 
   /**
-   * Calculates dashboard summary (latest, previous, difference)
+   * Calculates dashboard summary (latest, previous, difference, percentage change).
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
    */
   async getSummary(req, res) {
     try {
       const { uid } = req.user;
-      let logs = [];
-
-      if (useSimulation) {
-        logs = dbMock.find('footprints', f => f.userId === uid);
-        logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-      } else {
-        const snapshot = await db.collection('footprints')
-          .where('userId', '==', uid)
-          .orderBy('date', 'desc')
-          .limit(2)
-          .get();
-        snapshot.forEach(doc => {
-          logs.push({ id: doc.id, ...doc.data() });
-        });
-      }
+      const logs = await findDocuments('footprints', {
+        filterFn: f => f.userId === uid,
+        where: [{ field: 'userId', op: '==', value: uid }],
+        orderBy: 'date',
+        orderDir: 'desc',
+        limit: useSimulation ? undefined : 2
+      });
 
       if (logs.length === 0) {
         return res.json({

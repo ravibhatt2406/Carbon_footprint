@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { api } from '../utils/api';
-import { useAuth } from '../context/AuthContext';
+import React from 'react';
+import { useGoals } from '../hooks/useGoals';
+import { GOAL_PERIOD_OPTIONS } from '../utils/constants';
 import ProgressBar from '../components/ProgressBar';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -8,77 +8,19 @@ import { Target, Calendar, PlusCircle, CheckCircle, HelpCircle } from 'lucide-re
 
 /**
  * Goals page for creating and tracking carbon reduction targets.
+ * Uses the useGoals hook for all state management and API operations.
  * @returns {JSX.Element} The goals page
  */
 export default function Goals() {
-  const { refreshPoints } = useAuth();
-  const [goals, setGoals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  // New goal form state
-  const [targetValue, setTargetValue] = useState('');
-  const [days, setDays] = useState('30');
-  const [submitting, setSubmitting] = useState(false);
-
-  // Update progress input states
-  const [updateVal, setUpdateVal] = useState({});
-
-  const loadGoals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.get('/goals');
-      setGoals(data);
-    } catch (err) {
-      console.error('Failed to load goals:', err);
-      setError('Could not fetch goals list. Ensure backend is running.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadGoals();
-  }, [loadGoals]);
-
-  const handleCreateGoal = useCallback(async (e) => {
-    e.preventDefault();
-    if (!targetValue || Number(targetValue) <= 0) return;
-
-    setSubmitting(true);
-    setError('');
-
-    try {
-      const endDate = new Date(Date.now() + Number(days) * 24 * 60 * 60 * 1000).toISOString();
-      await api.post('/goals', { targetValue: Number(targetValue), endDate });
-      setTargetValue('');
-      await loadGoals();
-    } catch (err) {
-      console.error('Failed to create goal:', err);
-      setError('Failed to save goal. Try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [targetValue, days, loadGoals]);
-
-  const handleUpdateProgress = useCallback(async (goalId) => {
-    const progressVal = Number(updateVal[goalId]);
-    if (isNaN(progressVal) || progressVal < 0) return;
-
-    try {
-      await api.put(`/goals/${goalId}`, { currentProgress: progressVal });
-      // Reset input field
-      setUpdateVal(prev => ({ ...prev, [goalId]: '' }));
-      await loadGoals();
-      await refreshPoints(); // Sync badge achievements if a target completion triggers badge rewards
-    } catch (err) {
-      console.error('Failed to update progress:', err);
-      setError('Failed to update goal progress.');
-    }
-  }, [updateVal, loadGoals, refreshPoints]);
-
-  const activeGoals = useMemo(() => goals.filter(g => !g.completed), [goals]);
-  const completedGoals = useMemo(() => goals.filter(g => g.completed), [goals]);
+  const {
+    goals, loading, error,
+    targetValue, setTargetValue,
+    days, setDays,
+    submitting,
+    updateVal, setUpdateVal,
+    activeGoals, completedGoals,
+    handleCreateGoal, handleUpdateProgress,
+  } = useGoals();
 
   if (loading && goals.length === 0) {
     return <LoadingSpinner message="Loading your carbon reduction goals..." />;
@@ -128,10 +70,9 @@ export default function Goals() {
                   onChange={(e) => setDays(e.target.value)}
                   className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-eco-500 bg-white"
                 >
-                  <option value="7">7 Days (Short Challenge)</option>
-                  <option value="14">14 Days (Biweekly Goal)</option>
-                  <option value="30">30 Days (Monthly Goal)</option>
-                  <option value="90">90 Days (Quarterly Goal)</option>
+                  {GOAL_PERIOD_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 

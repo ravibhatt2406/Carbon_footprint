@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../utils/api';
+import { useDashboard } from '../hooks/useDashboard';
 import StatCard from '../components/StatCard';
 import ProgressBar from '../components/ProgressBar';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import PieChartCard from '../components/charts/PieChartCard';
+import LineChartCard from '../components/charts/LineChartCard';
 import {
   Leaf,
   Activity,
@@ -16,83 +18,23 @@ import {
   ArrowRight,
   PlusCircle
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from 'recharts';
-
-/** Chart color palette */
-const PIE_COLORS = ['#3b82f6', '#eab308', '#10b981', '#a855f7'];
 
 /**
  * Dashboard page displaying carbon footprint summary, charts, goals, and AI advice.
+ * Uses the useDashboard hook for data fetching and chart data transformations.
  * @returns {JSX.Element} The dashboard
  */
 export default function Dashboard() {
   const { user } = useAuth();
-  const [summary, setSummary] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [activeGoal, setActiveGoal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        setLoading(true);
-        // Load summary metrics
-        const summaryData = await api.get('/footprint-logs/summary');
-        setSummary(summaryData);
-
-        // Load historical logs
-        const historyLogs = await api.get('/footprint-logs/history');
-        setHistory(historyLogs);
-
-        // Load goals list and identify the latest active goal
-        const goals = await api.get('/goals');
-        const active = goals.find(g => !g.completed) || null;
-        setActiveGoal(active);
-      } catch (err) {
-        console.error('Failed to load dashboard metrics:', err);
-        setError('Could not retrieve dashboard statistics. Ensure backend is running.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDashboardData();
-  }, []);
-
-  // Pre-process charts data
-  const latestFootprint = summary?.current || null;
-
-  const pieData = useMemo(() => {
-    if (!latestFootprint) return [];
-    return [
-      { name: 'Transportation', value: latestFootprint.breakdown.transportation },
-      { name: 'Electricity', value: latestFootprint.breakdown.electricity },
-      { name: 'Diet & Food', value: latestFootprint.breakdown.food },
-      { name: 'Shopping Habits', value: latestFootprint.breakdown.shopping }
-    ].filter(item => item.value > 0);
-  }, [latestFootprint]);
-
-  const lineData = useMemo(() => {
-    return history
-      .map(log => ({
-        name: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        CO2: log.total
-      }))
-      .reverse();
-  }, [history]);
+  const {
+    summary,
+    activeGoal,
+    loading,
+    error,
+    latestFootprint,
+    pieData,
+    lineData,
+  } = useDashboard();
 
   if (loading) {
     return <LoadingSpinner message="Generating dashboard statistics..." />;
@@ -154,63 +96,8 @@ export default function Dashboard() {
         <>
           {/* Charts panels */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Pie Chart: Carbon Sources */}
-            <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between" aria-labelledby="pie-chart-heading">
-              <h2 id="pie-chart-heading" className="text-base font-extrabold text-slate-800 mb-6">Carbon Footprint Sources</h2>
-              <div className="h-72 w-full flex items-center justify-center">
-                {pieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={65}
-                        outerRadius={95}
-                        paddingAngle={4}
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => `${value} kg CO₂`} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-slate-400 text-sm font-semibold">Insufficient breakdown data</p>
-                )}
-              </div>
-            </section>
-
-            {/* Line Chart: History Log */}
-            <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between" aria-labelledby="line-chart-heading">
-              <h2 id="line-chart-heading" className="text-base font-extrabold text-slate-800 mb-6">Carbon Monthly Trend</h2>
-              <div className="h-72 w-full">
-                {lineData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={lineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
-                      <YAxis tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
-                      <Tooltip formatter={(value) => [`${value} kg CO₂`, 'Total Footprint']} />
-                      <Line
-                        type="monotone"
-                        dataKey="CO2"
-                        stroke="#10b981"
-                        strokeWidth={3}
-                        activeDot={{ r: 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-slate-400 text-sm font-semibold">Need more log entries to map trends</p>
-                  </div>
-                )}
-              </div>
-            </section>
+            <PieChartCard data={pieData} />
+            <LineChartCard data={lineData} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

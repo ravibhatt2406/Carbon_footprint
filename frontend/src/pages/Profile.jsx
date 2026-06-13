@@ -1,56 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../utils/api';
+import { useProfile } from '../hooks/useProfile';
+import { getBadgeIconColor } from '../utils/constants';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Award, Calendar, History, Lock } from 'lucide-react';
 
 /**
  * Profile page showing user info, badges/achievements, and calculation history.
+ * Uses the useProfile hook for data fetching and constants for badge styling.
  * @returns {JSX.Element} The profile page
  */
 export default function Profile() {
   const { user } = useAuth();
-  const [badges, setBadges] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    async function loadProfileData() {
-      try {
-        setLoading(true);
-        const badgesData = await api.get('/badges');
-        setBadges(badgesData);
-
-        const historyData = await api.get('/footprint-logs/history');
-        setHistory(historyData);
-      } catch (err) {
-        console.error('Failed to load profile details:', err);
-        setError('Failed to fetch profile history logs. Verify backend connection.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadProfileData();
-  }, []);
+  const { badges, history, loading, error } = useProfile();
 
   if (loading) {
     return <LoadingSpinner message="Loading profile parameters..." />;
   }
-
-  // Helper to resolve badge coloring icons
-  const getBadgeIconColor = (type, unlocked) => {
-    if (!unlocked) return 'bg-slate-100 text-slate-400';
-    switch (type) {
-      case 'beginner': return 'bg-blue-100 text-blue-700 border border-blue-200';
-      case 'eco_explorer': return 'bg-yellow-100 text-yellow-750 border border-yellow-200';
-      case 'green_warrior': return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-      case 'carbon_hero': return 'bg-indigo-100 text-indigo-750 border border-indigo-200';
-      default: return 'bg-slate-100 text-slate-700';
-    }
-  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 text-left">

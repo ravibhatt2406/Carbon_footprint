@@ -1,6 +1,6 @@
-const { db, useSimulation } = require('../config/firebase');
-const dbMock = require('../utils/dbMock');
+const { findDocuments, countDocuments, insertDocument } = require('../utils/dataAccess');
 
+/** Badge type definitions with titles and descriptions */
 const BADGES_CONFIG = {
   beginner: {
     title: 'Eco Beginner',
@@ -22,26 +22,22 @@ const BADGES_CONFIG = {
 
 const badgeController = {
   /**
-   * Retrieves all badges unlocked by the user
+   * Retrieves all badges (unlocked and locked) for the authenticated user.
+   * Runs a badge evaluation check first to ensure badges are up to date.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
    */
   async getBadges(req, res) {
     try {
       const { uid } = req.user;
-      let unlocked = [];
 
       // Run a quick evaluation check to ensure badges are up to date
       await badgeController.evaluateFootprintBadges(uid);
 
-      if (useSimulation) {
-        unlocked = dbMock.find('badges', b => b.userId === uid);
-      } else {
-        const snapshot = await db.collection('badges')
-          .where('userId', '==', uid)
-          .get();
-        snapshot.forEach(doc => {
-          unlocked.push({ id: doc.id, ...doc.data() });
-        });
-      }
+      const unlocked = await findDocuments('badges', {
+        filterFn: b => b.userId === uid,
+        where: [{ field: 'userId', op: '==', value: uid }]
+      });
 
       // Format response, making sure all possible badges are returned with status
       const badgesResult = Object.keys(BADGES_CONFIG).map(type => {
@@ -63,44 +59,40 @@ const badgeController = {
   },
 
   /**
-   * Evaluates carbon logs and challenge logs to award new badges
+   * Evaluates carbon logs and challenge logs to determine if new badges should be awarded.
+   * Called after footprint calculations, challenge completions, and goal updates.
+   * @param {string} userId - The user ID to evaluate badges for
    */
   async evaluateFootprintBadges(userId) {
     try {
-      let footprints = [];
-      let completedChallengesCount = 0;
-      let existingBadges = [];
-
       // 1. Fetch current user data from DB
-      if (useSimulation) {
-        footprints = dbMock.find('footprints', f => f.userId === userId);
-        footprints.sort((a, b) => new Date(a.date) - new Date(b.date)); // chronological order
+      const footprints = await findDocuments('footprints', {
+        filterFn: f => f.userId === userId,
+        where: [{ field: 'userId', op: '==', value: userId }],
+        orderBy: 'date',
+        orderDir: 'asc'
+      });
 
-        const challenges = dbMock.find('challenges', c => c.userId === userId && c.completed === true);
-        completedChallengesCount = challenges.length;
+      const completedChallengesCount = await countDocuments(
+        'challenges',
+        c => c.userId === userId && c.completed === true,
+        [
+          { field: 'userId', op: '==', value: userId },
+          { field: 'completed', op: '==', value: true }
+        ]
+      );
 
-        existingBadges = dbMock.find('badges', b => b.userId === userId);
-      } else {
-        // Firestore fetch
-        const footprintsSnap = await db.collection('footprints')
-          .where('userId', '==', userId)
-          .orderBy('date', 'asc')
-          .get();
-        footprintsSnap.forEach(doc => footprints.push({ id: doc.id, ...doc.data() }));
-
-        const challengesSnap = await db.collection('challenges')
-          .where('userId', '==', userId)
-          .where('completed', '==', true)
-          .get();
-        completedChallengesCount = challengesSnap.size;
-
-        const badgesSnap = await db.collection('badges')
-          .where('userId', '==', userId)
-          .get();
-        badgesSnap.forEach(doc => existingBadges.push({ id: doc.id, ...doc.data() }));
-      }
+      const existingBadges = await findDocuments('badges', {
+        filterFn: b => b.userId === userId,
+        where: [{ field: 'userId', op: '==', value: userId }]
+      });
 
       const hasBadge = (type) => existingBadges.some(b => b.badgeType === type);
+
+      /**
+       * Awards a badge to the user if not already earned.
+       * @param {string} type - Badge type key
+       */
       const awardBadge = async (type) => {
         const badgeData = {
           userId,
@@ -109,12 +101,7 @@ const badgeController = {
           description: BADGES_CONFIG[type].description,
           unlockedAt: new Date().toISOString()
         };
-
-        if (useSimulation) {
-          dbMock.insert('badges', badgeData);
-        } else {
-          await db.collection('badges').add(badgeData);
-        }
+        await insertDocument('badges', badgeData);
         console.log(`User ${userId} awarded badge: ${type}`);
       };
 

@@ -1,61 +1,22 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { api } from '../utils/api';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useChallenges } from '../hooks/useChallenges';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Award, Zap, CheckCircle2 } from 'lucide-react';
 
 /**
  * Weekly eco challenges page. Users complete sustainability challenges to earn points.
+ * Uses the useChallenges hook for all state management and API operations.
  * @returns {JSX.Element} The challenges page
  */
 export default function Challenges() {
-  const { user, refreshPoints } = useAuth();
-  const [challenges, setChallenges] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [completingId, setCompletingId] = useState(null);
-
-  const loadChallenges = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.get('/challenges');
-      setChallenges(data);
-    } catch (err) {
-      console.error('Failed to load challenges:', err);
-      setError('Could not fetch weekly challenges. Make sure backend is running.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadChallenges();
-  }, [loadChallenges]);
-
-  const handleComplete = useCallback(async (challengeId) => {
-    setCompletingId(challengeId);
-    setError('');
-
-    try {
-      await api.post(`/challenges/${challengeId}/complete`);
-      // Update local state
-      setChallenges(prev =>
-        prev.map(ch =>
-          ch.id === challengeId ? { ...ch, completed: true } : ch
-        )
-      );
-      // Update user points total in header
-      await refreshPoints();
-    } catch (err) {
-      console.error('Failed to complete challenge:', err);
-      setError('Error updating challenge completion. Please retry.');
-    } finally {
-      setCompletingId(null);
-    }
-  }, [refreshPoints]);
-
-  const completedCount = useMemo(() => challenges.filter(c => c.completed).length, [challenges]);
+  const { user } = useAuth();
+  const {
+    challenges, loading, error,
+    completingId, completedCount,
+    handleComplete,
+  } = useChallenges();
 
   if (loading && challenges.length === 0) {
     return <LoadingSpinner message="Loading weekly eco challenges..." />;
